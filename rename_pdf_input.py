@@ -38,8 +38,8 @@ debug_print(f"Cartella di output: {cartella_output}")
 os.makedirs(cartella_output, exist_ok=True)
 debug_print(f"Cartella di output creata (se non esisteva già): {cartella_output}")
 
-# Pattern per riconoscere il periodo (italiano)
-pattern_periodo = r"(Gennaio|Febbraio|Marzo|Aprile|Maggio|Giugno|Luglio|Agosto|Settembre|Ottobre|Novembre|Dicembre)\s+\d{4}"
+# Modifica il pattern per includere "AGG" opzionale alla fine
+pattern_periodo = r"(Gennaio|Febbraio|Marzo|Aprile|Maggio|Giugno|Luglio|Agosto|Settembre|Ottobre|Novembre|Dicembre)\s+\d{4}(?:\s+AGG)?"
 
 # Itera sui file PDF nella cartella di input
 for file in Path(cartella_pdf).glob("*.pdf"):
@@ -57,14 +57,17 @@ for file in Path(cartella_pdf).glob("*.pdf"):
         # Cerca il periodo
         match = re.search(pattern_periodo, testo_completo)
         if match:
-            periodo = match.group()  # es. Aprile 2021
-            mese, anno = periodo.split()
+            periodo = match.group()  # es. Aprile 2021 o Aprile 2021 AGG
+            mese, anno = periodo.split()[:2]
             mesi = {
                 "Gennaio": "01", "Febbraio": "02", "Marzo": "03", "Aprile": "04", "Maggio": "05", "Giugno": "06",
                 "Luglio": "07", "Agosto": "08", "Settembre": "09", "Ottobre": "10", "Novembre": "11", "Dicembre": "12"
             }
             mese_numero = mesi.get(mese, "00")
-            nuovo_nome = f"{anno}_{mese_numero}.pdf"  # es. 2021_04.pdf
+
+            # Controlla se il suffisso "AGG" è presente
+            suffisso = "_AGG" if "AGG" in periodo else ""
+            nuovo_nome = f"{anno}_{mese_numero}{suffisso}.pdf"  # es. 2021_04_AGG.pdf o 2021_04.pdf
             nuovo_percorso = Path(cartella_output) / nuovo_nome
             debug_print(f"Periodo trovato: {periodo}. Nuovo nome: {nuovo_nome}")
 
@@ -72,7 +75,7 @@ for file in Path(cartella_pdf).glob("*.pdf"):
             counter = 1
             while nuovo_percorso.exists():
                 debug_print(f"Il file {nuovo_percorso.name} esiste già. Incremento il contatore.")
-                nuovo_nome = f"{anno}_{mese_numero}_{counter}.pdf"
+                nuovo_nome = f"{anno}_{mese_numero}{suffisso}_{counter}.pdf"
                 nuovo_percorso = Path(cartella_output) / nuovo_nome
                 counter += 1
 
