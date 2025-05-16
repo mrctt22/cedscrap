@@ -22,8 +22,8 @@ if config is None:
     exit(1)
 
 def debug_print(message):
-    """Stampa messaggi di debug solo se flag_config è impostato a 'Y'."""
-    if config.get("flag_config", "N") == "Y":
+    """Stampa messaggi di debug solo se flag_debug è impostato a 'Y'."""
+    if config.get("flag_debug", "N") == "Y":
         print(message)
 
 debug_print(f"Caricamento configurazione da: {config_path}")
