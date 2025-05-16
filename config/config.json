@@ -2,5 +2,6 @@
   "input_dir": "input",
   "output_dir": "output",
   "preinput_dir": "preinput",
-  "flag_debug": "Y"
+  "flag_debug": "Y",
+  "ocr_zoom_level": 2.0
 }

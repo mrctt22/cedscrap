@@ -1,31 +1,98 @@
-import pdfplumber
+import fitz  # PyMuPDF
+from pytesseract import pytesseract
+
+# Configura manualmente il percorso di Tesseract
+pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+from PIL import Image
 import csv
 import json
 import os
+import re
 
-def extract_data_from_pdf(pdf_path, csv_path):
+def debug_print(message):
+    """Stampa messaggi di debug se il flag_debug è impostato su 'Y' nel file di configurazione."""
+    if config.get("flag_debug", "N") == "Y":
+        print(f"DEBUG: {message}")
+
+# Aggiungi questa funzione per mostrare l'immagine ritagliata durante il debug
+def show_cropped_image(image, key):
+    """Mostra l'immagine ritagliata per il debug."""
+    if config.get("flag_debug", "N") == "Y":
+        image.show(title=f"Cropped Image for {key}")
+
+def extract_structured_data_from_pdf(pdf_path, csv_path):
+    """Estrae dati strutturati da un PDF utilizzando OCR e li salva in un file CSV."""
     try:
-        # Apri il file PDF
-        with pdfplumber.open(pdf_path) as pdf:
-            data = []
+        debug_print(f"Apertura del file PDF: {pdf_path}")
+        pdf_document = fitz.open(pdf_path)
+        structured_data = []
 
-            # Estrai testo da ogni pagina
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    # Dividi il testo in righe e aggiungilo ai dati
-                    lines = text.split('\n')
-                    data.extend(lines)
+        # Definizione delle coordinate per ogni valore da estrarre
+        coordinates = {
+            "TOTALE_COMPETENZE": (540, 696, 580, 707)  # Esempio: (x1, y1, x2, y2)
+        }
 
-        # Scrivi i dati estratti in un file CSV
+        
+        for page_number in range(len(pdf_document)):
+            debug_print(f"Estrazione della pagina {page_number + 1}")
+            # Carica la pagina del PDF
+            page = pdf_document.load_page(page_number)
+            # Leggi il livello di zoom dal file di configurazione
+            zoom_level = config.get("ocr_zoom_level", 1.0)  # Valore predefinito: 2.0
+
+            # Converti la pagina in immagine con una risoluzione maggiore
+            zoom_x = zoom_level  # Fattore di zoom orizzontale
+            zoom_y = zoom_level  # Fattore di zoom verticale
+            mat = fitz.Matrix(zoom_x, zoom_y)
+            pix = page.get_pixmap(matrix=mat)
+
+            # Converti la pagina in immagine
+            image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            
+            page_data = {}
+            for key, (x1, y1, x2, y2) in coordinates.items():
+                # Ritaglia l'immagine in base alle coordinate
+                # Calcola le coordinate in base al livello di zoom
+                cropped_image = image.crop((x1*zoom_level, y1*zoom_level, x2*zoom_level, y2*zoom_level))
+                # Converti in scala di grigi
+                cropped_image = cropped_image.convert("L")  
+
+                # Mostra l'immagine ritagliata durante il debug
+                #show_cropped_image(image,key)
+                show_cropped_image(cropped_image, key)
+                
+                # Configurazione personalizzata per riconoscere solo numeri e i caratteri ',' e '.'
+                #custom_config = r'--psm 11 -c tessedit_char_whitelist=0123456789,.'
+                custom_config = r'--psm 11'
+
+                # Esegui OCR sull'area ritagliata
+                debug_print(f"Esecuzione OCR per {key} nella pagina {page_number + 1}")
+                text = pytesseract.image_to_string(cropped_image)
+
+                # Stampa il testo riconosciuto dall'OCR durante il debug
+                debug_print(f"Testo riconosciuto per {key}: {text.strip()}")
+
+                # Pulisci e salva il testo estratto
+                if text.strip():
+                    page_data[key] = text.strip()
+
+            if page_data:
+                structured_data.append(page_data)
+
+        pdf_document.close()
+
+        # Scrivi i dati strutturati in un file CSV
+        debug_print(f"Scrittura dei dati strutturati nel file CSV: {csv_path}")
         with open(csv_path, mode='w', newline='', encoding='utf-8') as csv_file:
-            writer = csv.writer(csv_file)
-            for row in data:
-                writer.writerow([row])
+            writer = csv.DictWriter(csv_file, fieldnames=coordinates.keys())
+            writer.writeheader()
+            writer.writerows(structured_data)
 
-        print(f"Dati estratti e salvati in {csv_path}")
+        print(f"Dati strutturati estratti e salvati in {csv_path}")
 
     except Exception as e:
+        debug_print(f"Errore durante l'elaborazione del file PDF: {e}")
         print(f"Errore durante l'elaborazione: {e}")
 
 def load_config(config_path):
@@ -40,26 +107,25 @@ def load_config(config_path):
 def process_all_pdfs_in_directory(input_dir, output_dir):
     """Elabora tutti i file PDF nella cartella di input e salva i risultati nella cartella di output."""
     try:
-        # Crea la cartella di output se non esiste
+        debug_print(f"Creazione della cartella di output: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
 
-        # Itera su tutti i file nella cartella di input
         for filename in os.listdir(input_dir):
             if filename.endswith(".pdf"):
                 pdf_path = os.path.join(input_dir, filename)
-                csv_filename = os.path.splitext(filename)[0] + ".csv"
+                csv_filename = os.path.splitext(filename)[0] + "_structured.csv"
                 csv_path = os.path.join(output_dir, csv_filename)
 
-                # Elabora il file PDF e salva il risultato in CSV
-                print(f"Elaborazione di {pdf_path}...")
-                extract_data_from_pdf(pdf_path, csv_path)
+                debug_print(f"Elaborazione del file PDF: {pdf_path}")
+                extract_structured_data_from_pdf(pdf_path, csv_path)
 
     except Exception as e:
+        debug_print(f"Errore durante l'elaborazione della directory: {e}")
         print(f"Errore durante l'elaborazione della directory: {e}")
 
 if __name__ == "__main__":
     # Percorso del file di configurazione
-    config_path = "config.json"
+    config_path = "config/config.json"
 
     # Carica la configurazione
     config = load_config(config_path)
