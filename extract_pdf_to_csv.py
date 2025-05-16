@@ -1,6 +1,7 @@
 import pdfplumber
 import csv
 import json
+import os
 
 def extract_data_from_pdf(pdf_path, csv_path):
     try:
@@ -36,18 +37,38 @@ def load_config(config_path):
         print(f"Errore durante il caricamento del file di configurazione: {e}")
         return None
 
+def process_all_pdfs_in_directory(input_dir, output_dir):
+    """Elabora tutti i file PDF nella cartella di input e salva i risultati nella cartella di output."""
+    try:
+        # Crea la cartella di output se non esiste
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Itera su tutti i file nella cartella di input
+        for filename in os.listdir(input_dir):
+            if filename.endswith(".pdf"):
+                pdf_path = os.path.join(input_dir, filename)
+                csv_filename = os.path.splitext(filename)[0] + ".csv"
+                csv_path = os.path.join(output_dir, csv_filename)
+
+                # Elabora il file PDF e salva il risultato in CSV
+                print(f"Elaborazione di {pdf_path}...")
+                extract_data_from_pdf(pdf_path, csv_path)
+
+    except Exception as e:
+        print(f"Errore durante l'elaborazione della directory: {e}")
+
 if __name__ == "__main__":
     # Percorso del file di configurazione
-    config_path = "config/config.json"
+    config_path = "config.json"
 
     # Carica la configurazione
     config = load_config(config_path)
     if config is None:
         exit(1)
 
-    # Leggi i percorsi dal file di configurazione
-    pdf_path = config.get("pdf_path", "input.pdf")
-    csv_path = config.get("csv_path", "output.csv")
+    # Leggi i percorsi delle cartelle dal file di configurazione
+    input_dir = config.get("input_dir", "input")
+    output_dir = config.get("output_dir", "output")
 
-    # Esegui l'estrazione dei dati
-    extract_data_from_pdf(pdf_path, csv_path)
+    # Elabora tutti i file PDF nella cartella di input
+    process_all_pdfs_in_directory(input_dir, output_dir)

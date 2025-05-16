@@ -1,1 +1,1 @@
-file per primo publish repository
+codice python per leggere una serie di pdf relativi a cedolini, recuperare il mese di riferimento di ogni file, rinominarli in modo coerente ed utilizzarli per l'estrazione di dati per l'export in csv
