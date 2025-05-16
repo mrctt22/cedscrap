@@ -30,7 +30,7 @@ def extract_structured_data_from_pdf(pdf_path, csv_path):
 
         # Definizione delle coordinate per ogni valore da estrarre
         coordinates = {
-            "TOTALE_COMPETENZE": (540, 696, 580, 707)  # Esempio: (x1, y1, x2, y2)
+            "TC": (540, 696, 580, 707)  # Esempio: (x1, y1, x2, y2)
         }
 
         
@@ -61,14 +61,10 @@ def extract_structured_data_from_pdf(pdf_path, csv_path):
                 # Mostra l'immagine ritagliata durante il debug
                 #show_cropped_image(image,key)
                 show_cropped_image(cropped_image, key)
-                
-                # Configurazione personalizzata per riconoscere solo numeri e i caratteri ',' e '.'
-                #custom_config = r'--psm 11 -c tessedit_char_whitelist=0123456789,.'
-                custom_config = r'--psm 11'
 
                 # Esegui OCR sull'area ritagliata
                 debug_print(f"Esecuzione OCR per {key} nella pagina {page_number + 1}")
-                text = pytesseract.image_to_string(cropped_image)
+                text = pytesseract.image_to_string(cropped_image, lang='eng', config='--psm 7')
 
                 # Stampa il testo riconosciuto dall'OCR durante il debug
                 debug_print(f"Testo riconosciuto per {key}: {text.strip()}")
