@@ -12,8 +12,8 @@ def merge_csv_files(input_folder, output_file):
             file_path = os.path.join(input_folder, filename)
             # Legge il file CSV
             df = pd.read_csv(file_path)
-            # Aggiunge una colonna 'FILENAME' con il nome del file senza estensione
-            df['FILENAME'] = os.path.splitext(filename)[0]
+            # Aggiunge una colonna 'FILENAME' come primo campo con il nome del file senza estensione
+            df.insert(0, 'FILENAME', '' + os.path.splitext(filename)[0] + '')
             # Aggiunge il DataFrame alla lista
             dataframes.append(df)
 
@@ -41,6 +41,9 @@ if __name__ == "__main__":
 
     # Leggi i percorsi delle cartelle dal file di configurazione
     output_dir = config.get("output_dir", "output")
-    output_file = output_dir + "/0_csv_tot.csv"
+    output_file = output_dir + "/" + config.get("output_file", "output_file")
 
+    # Cancella il file di output se esiste
+    if os.path.exists(output_file):
+        os.remove(output_file)
 merge_csv_files(output_dir, output_file)

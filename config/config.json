@@ -1,6 +1,7 @@
 {
   "input_dir": "input",
   "output_dir": "output",
+  "output_file": "0_csv_tot.csv",
   "preinput_dir": "preinput",
   "flag_debug": "N",
   "ocr_zoom_level": 2.0,
