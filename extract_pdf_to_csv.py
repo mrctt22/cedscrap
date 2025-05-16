@@ -28,53 +28,53 @@ def extract_structured_data_from_pdf(pdf_path, csv_path):
         pdf_document = fitz.open(pdf_path)
         structured_data = []
 
-        # Definizione delle coordinate per ogni valore da estrarre
-        coordinates = {
-            "TC": (540, 696, 580, 707)  # Esempio: (x1, y1, x2, y2)
-        }
+        # Leggi le coordinate dal file di configurazione
+        coordinates = config.get("ocr_coordinates", {
+            "TC": (540, 696, 580, 707),
+            "XX": (0, 0, 100, 100)  # Valori predefiniti
+        })
 
+        # Carica solo l'ultima pagina del PDF
+        last_page_number = len(pdf_document) - 1
+        debug_print(f"Estrazione dell'ultima pagina: {last_page_number + 1}")
+        page = pdf_document.load_page(last_page_number)
+        # Leggi il livello di zoom dal file di configurazione
+        zoom_level = config.get("ocr_zoom_level", 1.0)  # Valore predefinito: 2.0
+
+        # Converti la pagina in immagine con una risoluzione maggiore
+        zoom_x = zoom_level  # Fattore di zoom orizzontale
+        zoom_y = zoom_level  # Fattore di zoom verticale
+        mat = fitz.Matrix(zoom_x, zoom_y)
+        pix = page.get_pixmap(matrix=mat)
+
+        # Converti la pagina in immagine
+        image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         
-        for page_number in range(len(pdf_document)):
-            debug_print(f"Estrazione della pagina {page_number + 1}")
-            # Carica la pagina del PDF
-            page = pdf_document.load_page(page_number)
-            # Leggi il livello di zoom dal file di configurazione
-            zoom_level = config.get("ocr_zoom_level", 1.0)  # Valore predefinito: 2.0
+        page_data = {}
+        for key, (x1, y1, x2, y2) in coordinates.items():
+            # Ritaglia l'immagine in base alle coordinate
+            # Calcola le coordinate in base al livello di zoom
+            cropped_image = image.crop((x1*zoom_level, y1*zoom_level, x2*zoom_level, y2*zoom_level))
+            # Converti in scala di grigi
+            cropped_image = cropped_image.convert("L")  
 
-            # Converti la pagina in immagine con una risoluzione maggiore
-            zoom_x = zoom_level  # Fattore di zoom orizzontale
-            zoom_y = zoom_level  # Fattore di zoom verticale
-            mat = fitz.Matrix(zoom_x, zoom_y)
-            pix = page.get_pixmap(matrix=mat)
+            # Mostra l'immagine ritagliata durante il debug
+            #show_cropped_image(image,key)
+            show_cropped_image(cropped_image, key)
 
-            # Converti la pagina in immagine
-            image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            
-            page_data = {}
-            for key, (x1, y1, x2, y2) in coordinates.items():
-                # Ritaglia l'immagine in base alle coordinate
-                # Calcola le coordinate in base al livello di zoom
-                cropped_image = image.crop((x1*zoom_level, y1*zoom_level, x2*zoom_level, y2*zoom_level))
-                # Converti in scala di grigi
-                cropped_image = cropped_image.convert("L")  
+            # Esegui OCR sull'area ritagliata
+            debug_print(f"Esecuzione OCR per {key} nella pagina {last_page_number + 1}")
+            text = pytesseract.image_to_string(cropped_image, config='--psm 7')
 
-                # Mostra l'immagine ritagliata durante il debug
-                #show_cropped_image(image,key)
-                show_cropped_image(cropped_image, key)
+            # Stampa il testo riconosciuto dall'OCR durante il debug
+            debug_print(f"Testo riconosciuto per {key}: {text.strip()}")
 
-                # Esegui OCR sull'area ritagliata
-                debug_print(f"Esecuzione OCR per {key} nella pagina {page_number + 1}")
-                text = pytesseract.image_to_string(cropped_image, lang='eng', config='--psm 7')
+            # Pulisci e salva il testo estratto
+            if text.strip():
+                page_data[key] = text.strip()
 
-                # Stampa il testo riconosciuto dall'OCR durante il debug
-                debug_print(f"Testo riconosciuto per {key}: {text.strip()}")
-
-                # Pulisci e salva il testo estratto
-                if text.strip():
-                    page_data[key] = text.strip()
-
-            if page_data:
-                structured_data.append(page_data)
+        if page_data:
+            structured_data.append(page_data)
 
         pdf_document.close()
 
@@ -109,7 +109,7 @@ def process_all_pdfs_in_directory(input_dir, output_dir):
         for filename in os.listdir(input_dir):
             if filename.endswith(".pdf"):
                 pdf_path = os.path.join(input_dir, filename)
-                csv_filename = os.path.splitext(filename)[0] + "_structured.csv"
+                csv_filename = os.path.splitext(filename)[0] + ".csv"
                 csv_path = os.path.join(output_dir, csv_filename)
 
                 debug_print(f"Elaborazione del file PDF: {pdf_path}")

@@ -1,0 +1,4 @@
+1) gestione delle coordinate ocr da file config.json
+2) gestione salvataggio immagini usate per ocr in sottocartella debug
+3) creazione file di log in cartella log
+4) gestione layout cedolini diverso in anni diversi
