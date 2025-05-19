@@ -5,10 +5,23 @@
   "preinput_dir": "preinput",
   "flag_debug": "N",
   "ocr_zoom_level": 2.0,
-  "ocr_coordinates": {
-    "TC": [540, 696, 580, 710],
-    "TT": [540, 710, 580, 720],
-    "AR": [559, 723, 578, 732],
-    "NM": [505, 740, 555, 750]
-  }
+  "tesseract_path": "C:/Program Files/Tesseract-OCR/tesseract.exe",
+  "ocr_coordinates": 
+    {
+    "Competenze": [540, 696, 580, 710],
+    "Trattenute": [540, 710, 580, 720],
+    "Arrotondamento": [559, 723, 578, 732],
+    "Netto": [505, 740, 555, 750],
+    "Ferie_Maturato_dd": [121, 713, 155, 722],
+    "Ferie_Goduto_dd": [183, 713, 215, 722],
+    "Ferie_Residuo_dd": [250, 713, 283, 722],
+    "Ferie_Residuo_AP_dd": [314, 713, 360, 722], 
+    "Permessi_Maturato_hh": [121, 724, 155, 733],
+    "Permessi_Goduto_hh": [183, 724, 215, 733],
+    "Permessi_Residuo_hh": [250, 724, 283, 733],
+    "Permessi_Residuo_AP_hh": [314, 724, 360, 733]
+    },
+  "ocr_table_coordinates": {
+    "XX": [0, 0, 1, 1]
+    }
 }

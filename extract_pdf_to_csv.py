@@ -1,14 +1,23 @@
 import fitz  # PyMuPDF
 from pytesseract import pytesseract
-
-# Configura manualmente il percorso di Tesseract
-pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
 from PIL import Image
 import csv
 import json
 import os
 import re
+
+# Carica la configurazione prima di impostare pytesseract.tesseract_cmd
+config_path = "config/config.json"
+config = None
+try:
+    with open(config_path, 'r', encoding='utf-8') as config_file:
+        config = json.load(config_file)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+except Exception as e:
+    print(f"Errore durante il caricamento del file di configurazione: {e}")
+    exit(1)
+
+# Imposta il path di tesseract da config, se presente
+pytesseract.tesseract_cmd = config.get("tesseract_path")
 
 def debug_print(message):
     """Stampa messaggi di debug se il flag_debug è impostato su 'Y' nel file di configurazione."""
@@ -114,10 +123,57 @@ def process_all_pdfs_in_directory(input_dir, output_dir):
 
                 debug_print(f"Elaborazione del file PDF: {pdf_path}")
                 extract_structured_data_from_pdf(pdf_path, csv_path)
+                #extract_table_data_from_pdf(pdf_path, csv_path)
 
     except Exception as e:
         debug_print(f"Errore durante l'elaborazione della directory: {e}")
         print(f"Errore durante l'elaborazione della directory: {e}")
+
+def extract_table_data_from_pdf(pdf_path, csv_path):
+    """Estrae i dati di una tabella da un PDF utilizzando OCR su aree configurate e li salva in un file CSV."""
+    try:
+        debug_print(f"Apertura del file PDF per tabella: {pdf_path}")
+        pdf_document = fitz.open(pdf_path)
+        last_page_number = len(pdf_document) - 1
+        page = pdf_document.load_page(last_page_number)
+        zoom_level = config.get("ocr_zoom_level", 1.0)
+        mat = fitz.Matrix(zoom_level, zoom_level)
+        pix = page.get_pixmap(matrix=mat)
+        image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+        # Leggi le coordinate delle aree tabella dal file di configurazione
+        coordinates = config.get("ocr_table_coordinates", {})
+        if not coordinates:
+            debug_print("Nessuna area tabella configurata in ocr_table_coordinates.")
+            print("Errore: nessuna area tabella configurata.")
+            return
+
+        table_data = []
+        header = list(coordinates.keys())
+        row = {}
+        for key, (x1, y1, x2, y2) in coordinates.items():
+            cropped_image = image.crop((x1*zoom_level, y1*zoom_level, x2*zoom_level, y2*zoom_level))
+            cropped_image = cropped_image.convert("L")
+            show_cropped_image(cropped_image, key)
+            debug_print(f"Esecuzione OCR per area tabella {key}")
+            text = pytesseract.image_to_string(cropped_image, config='--psm 6')
+            debug_print(f"Testo riconosciuto per {key}: {text.strip()}")
+            row[key] = text.strip()
+        table_data.append(row)
+
+        pdf_document.close()
+
+        # Scrivi i dati estratti in un file CSV
+        debug_print(f"Scrittura dati tabella in {csv_path}")
+        with open(csv_path, mode='a', newline='', encoding='utf-8') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=header)
+            if os.stat(csv_path).st_size == 0:
+                writer.writeheader()
+            writer.writerows(table_data)
+        print(f"Dati tabella estratti e aggiunti in {csv_path}")
+    except Exception as e:
+        debug_print(f"Errore durante l'estrazione tabella: {e}")
+        print(f"Errore durante l'estrazione tabella: {e}")
 
 if __name__ == "__main__":
     # Percorso del file di configurazione
